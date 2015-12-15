@@ -12,9 +12,9 @@
 #' @examples
 #' fishRecharge<-vadose.recharge(ZoneStorageTime=c(4,3,3,3),AquiferZoneDryFractions = list(c(0.8,0.8,0.8,0.8),c(0,0,0,0),c(0,0,0.193,0.8263)),AquiferZoneIrrigFractions=list(c(0,0,0,0),c(0,0,0,0),c(0,0,0.0069,0.1737)),RiverRechargeFractions=c(1,1,0.958,1),RechargeFileName=system.file("extdata","GoldenBayLandSurfaceRechargeData.csv",package="GDATools"),PumpingFileName=system.file("extdata","GoldenBayGWPumpingData.csv",package="GDATools"))
 #' fishDischarge <- bouss.eigen(WellDistance=66000,ZoneLengths=c(35600,5700,8900,15800),Storativity=0.01,Transmisivity=313632,DischargeScaleFactor=950,RechargeData=fishRecharge,GWBypassFlow=1)
-#' Observed <- read.csv(system.file("extdata","Observeddata.csv",package="GDATools"))
+#' Observeddata <- read.csv(system.file("extdata","Observeddata.csv",package="GDATools"))
 #' library(zoo)
-#' ObservedZoo <- read.zoo(Observeddata,format="%d/%m/%Y")
+#' ObserveddataZoo <- read.zoo(Observeddata,format="%d/%m/%Y")
 #' bouss.plot(fishDischarge[,4],ObserveddataZoo$FishCreekDischarge)
 
 bouss.plot <- function(EstimatedTimeseries,ObservedTimeseries,startDate=NULL,endDate=NULL) {

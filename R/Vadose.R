@@ -60,7 +60,7 @@ ZoneRiverRecharge <- sweep(ZoneTimeseries[(ncol(ZoneTimeseries)-2*NumberOfZones+
 #Get the sums for each zone so that we are left with just one timeseries for each zone
 ZoneSurfaceRechargeTotals    <- c()     #Initialise
 for (ZoneNo in 1:(NumberOfZones)){
-  ZoneSurfaceRechargeTotals <- cbind(ZoneSurfaceRechargeTotals,rowSums(ZoneSurfaceRecharge[,c(((ZoneNo-1)*(2*NumberOfAquifers)+1):(ZoneNo*2*NumberOfAquifers))]))
+  ZoneSurfaceRechargeTotals <- cbind(ZoneSurfaceRechargeTotals,rowSums(ZoneSurfaceRecharge[,c(((ZoneNo-1)*(2*NumberOfAquifers)+1):(ZoneNo*2*NumberOfAquifers)),drop=FALSE]))
 }
 
 #Uncomment below and comment out the line below below if the river recharge is to have a delay into the vadose zone
@@ -92,7 +92,7 @@ PumpingScaled <- sweep(PumpingTimeseries[,2:ncol(PumpingTimeseries)],MARGIN=2, a
 #Now I need to add together the aquifers
 PumpingTotals    <- c()     #Initialise
 for (ZoneNo in 1:(NumberOfZones)){
-  PumpingTotals <- cbind(PumpingTotals,rowSums(PumpingScaled[,c(((ZoneNo-1)*(NumberOfAquifers)+1):(ZoneNo*NumberOfAquifers))]))
+  PumpingTotals <- cbind(PumpingTotals,rowSums(PumpingScaled[,c(((ZoneNo-1)*(NumberOfAquifers)+1):(ZoneNo*NumberOfAquifers)),drop=FALSE]))
 }
 
 ZoneVadoseRecharge <- ZoneVadoseRecharge - PumpingTotals
