@@ -11,7 +11,7 @@
 #' @param ZoneStorageTime The time (in days) that it takes for water to get through the vadose zone into the groundwater, one value for each zone.
 #' @param AquiferZoneDryFractions a list of vectors of the proportion of each aquifer's dryland recharge that is contributing to each zones vadose recharge
 #' @param AquiferZoneIrrigFractions a list of vectors of the proportion of each aquifer's irrigation recharge that is contributing to each zones vadose recharge
-#' @param RiverRechargeFractions The fraction of the river discahrge that contributes to the groundwater for each zone.  
+#' @param RiverRechargeFractions The fraction of the river discahrge that contributes to the groundwater for each zone.
 #' @param RechargeFilename The csv file with all the data in it. This is the daily timeseries of vadose recharge for each zone, and river recharge in mm
 #' @param PumpingFileName The csv file with the pumping data in it. In mm. One series per aquifer per zone, ordered as Z1A1, Z1A2..Z1An,Z2A1,Z2A2..Z2An..ZnA1,ZnA2...ZnAn
 #' @keywords groundwater, hydrology
@@ -19,6 +19,9 @@
 #' @examples
 #' R
 #' fishRecharge<-vadose.recharge(ZoneStorageTime=c(4,3,3,3),AquiferZoneDryFractions = list(c(0.8,0.8,0.8,0.8),c(0,0,0,0),c(0,0,0.193,0.8263)),AquiferZoneIrrigFractions=list(c(0,0,0,0),c(0,0,0,0),c(0,0,0.0069,0.1737)),RiverRechargeFractions=c(1,1,0.958,1),RechargeFileName=system.file("extdata","GoldenBayLandSurfaceRechargeData.csv",package="GDATools"),PumpingFileName=system.file("extdata","GoldenBayGWPumpingData.csv",package="GDATools"))
+#' VadoseL36_2369<-vadose.recharge(ZoneStorageTime=c(12.2,12.2,12.2),AquiferZoneDryFractions = list(c(0,0,0)),AquiferZoneIrrigFractions=list(c(1,1,1)),RiverRechargeFractions=c(0,0,0),RechargeFileName="\\\\aqualinc-sbs\\data\\ARL Projects\\RD Projects\\RD18016_Ecan groundwater level forecast\\Data\\GDAToolsTestData\\L36-2369LandSurfaceRechargeData.csv",PumpingFileName="\\\\aqualinc-sbs\\data\\ARL Projects\\RD Projects\\RD18016_Ecan groundwater level forecast\\Data\\GDAToolsTestData\\L36-2369GWPumpingData.csv")
+
+
 
 vadose.recharge <- function(ZoneStorageTime = c(30,30,30,20),
                             AquiferZoneDryFractions = list(c(0.3,0.3,0.3,0.3),
@@ -29,10 +32,10 @@ vadose.recharge <- function(ZoneStorageTime = c(30,30,30,20),
                                                               c(0.009,0.0602,0.0069,0.1737)),
                             RiverRechargeFractions = c(0,0,0,0),
                             RechargeFileName ="GoldenBayLandSurfaceRechargeData.csv",
-                            PumpingFileName = "GoldenBayGWPumpingData.csv")  
-  
+                            PumpingFileName = "GoldenBayGWPumpingData.csv")
+
 {  #Start of the function
-  
+
 #Load libraries
 library(TTR)          #This library includes the EMA exponentially weighted moving average
 
@@ -40,14 +43,14 @@ library(TTR)          #This library includes the EMA exponentially weighted movi
 ZoneTimeseries        <-  read.csv(RechargeFileName)                              #this is the daily timeseries of observed discharge and groundwater level, vadose recharge for each zone, river recharge to groundwater and groundwater pumping in mm
 PumpingTimeseries     <-  read.csv(PumpingFileName)                               #This is the daily timeseries of pumping for each aquifer in each zone. Same date range as the Recharge data.
 
-#Calculate the number of zones and aquifers based on the 
+#Calculate the number of zones and aquifers based on the
 NumberOfZones         <- length(AquiferZoneDryFractions[[1]])
 NumberOfAquifers      <- length(AquiferZoneDryFractions)
 
 #Multiply the aquifer recharge fractions by the recharge timeseries to calculate a total recharge for each zone
 ZoneFractions  <- c()                                               #Initialise ZoneFractions to an empty set
 for (ZoneNo in 1:NumberOfZones){
-  
+
   for (AquiferNo in 1:NumberOfAquifers){
     ZoneFractions <- c(ZoneFractions,AquiferZoneDryFractions[[AquiferNo]][ZoneNo],AquiferZoneIrrigFractions[[AquiferNo]][ZoneNo])
   }
@@ -74,8 +77,27 @@ for (ZoneNo in 1:(NumberOfZones)){
   RechargeList[[length(RechargeList)+1]]<-list(series=ZoneRechargeTotals[,ZoneNo],timeConstant=ZoneStorageTime[ZoneNo])
 }
 
+
 #Apply the exponential weighted moving average
-ZoneVadoseRecharge <- sapply(RechargeList, function(x) EMA(x$series,n=1,ratio=1-exp(-1/max(x$timeConstant,0.000001))))
+#ZoneVadoseRecharge <- sapply(RechargeList, function(x) EMA(x$series,n=1,ratio=1-exp(-1/max(x$timeConstant,0.000001))))
+
+ZoneVadoseRecharge <- sapply(seq_along(RechargeList), function(RechargeListIndex) {
+
+  LSRSeries <- RechargeList[[RechargeListIndex]]$series
+  TimeConstant <- RechargeList[[RechargeListIndex]]$timeConstant
+
+  OffsetSeries <- c(0,LSRSeries[1:(length(LSRSeries)-1)])
+
+  CurrentDaysWeightedVadose <- LSRSeries*(1-exp(-1/max(TimeConstant,0.000001)))
+
+  VadoseLSR <- rep(0,length(LSRSeries))
+  for (VadoseValueIndex in 1:length(LSRSeries)) {
+    if(VadoseValueIndex == 1) VadoseLSR[VadoseValueIndex] <- CurrentDaysWeightedVadose[VadoseValueIndex]
+    else {VadoseLSR[VadoseValueIndex] <- VadoseLSR[VadoseValueIndex-1]*exp(-1/max(TimeConstant,0.000001))+CurrentDaysWeightedVadose[VadoseValueIndex]}
+  }
+  return(VadoseLSR)
+})
+
 names(ZoneVadoseRecharge) <- paste0("VadoseZ",seq(1,length.out=NumberOfZones))
 
 #This recharge is for when the stream is directly connected to the groundwater, so no delay.
@@ -94,6 +116,7 @@ PumpingTotals    <- c()     #Initialise
 for (ZoneNo in 1:(NumberOfZones)){
   PumpingTotals <- cbind(PumpingTotals,rowSums(PumpingScaled[,c(((ZoneNo-1)*(NumberOfAquifers)+1):(ZoneNo*NumberOfAquifers)),drop=FALSE]))
 }
+PumpingTotals <- as.data.frame(PumpingTotals)
 
 ZoneVadoseRecharge <- ZoneVadoseRecharge - PumpingTotals
 
@@ -107,7 +130,7 @@ rownames(ZoneVadoseRecharge) <- ZoneTimeseries[,1]
 colnames(ZoneVadoseRecharge) <- paste0("Zone",c(1:NumberOfZones))
 
 #Put the observed data back on
-#ZoneVadoseRecharge <- cbind(ZoneTimeseries[,2:3],ZoneVadoseRecharge) 
+#ZoneVadoseRecharge <- cbind(ZoneTimeseries[,2:3],ZoneVadoseRecharge)
 
 return(ZoneVadoseRecharge)
 } #End of function
