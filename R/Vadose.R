@@ -13,7 +13,6 @@
 #' @param AquiferZoneIrrigFractions a list of vectors of the proportion of each aquifer's irrigation recharge that is contributing to each zones vadose recharge
 #' @param RiverRechargeFractions The fraction of the river discahrge that contributes to the groundwater for each zone.
 #' @param RechargeFilename The csv file with all the data in it. This is the daily timeseries of vadose recharge for each zone, and river recharge in mm
-#' @param PumpingFileName The csv file with the pumping data in it. In mm. One series per aquifer per zone, ordered as Z1A1, Z1A2..Z1An,Z2A1,Z2A2..Z2An..ZnA1,ZnA2...ZnAn
 #' @keywords groundwater, hydrology
 #' @export
 #' @examples
@@ -31,8 +30,7 @@ vadose.recharge <- function(ZoneStorageTime = c(30,30,30,20),
                                                               c(0,0,0,0),
                                                               c(0.009,0.0602,0.0069,0.1737)),
                             RiverRechargeFractions = c(0,0,0,0),
-                            RechargeFileName ="GoldenBayLandSurfaceRechargeData.csv",
-                            PumpingFileName = "GoldenBayGWPumpingData.csv")
+                            RechargeFileName ="GoldenBayLandSurfaceRechargeData.csv")
 
 {  #Start of the function
 
@@ -41,11 +39,13 @@ library(TTR)          #This library includes the EMA exponentially weighted movi
 
 #read in the data
 ZoneTimeseries        <-  read.csv(RechargeFileName)                              #this is the daily timeseries of observed discharge and groundwater level, vadose recharge for each zone, river recharge to groundwater and groundwater pumping in mm
-PumpingTimeseries     <-  read.csv(PumpingFileName)                               #This is the daily timeseries of pumping for each aquifer in each zone. Same date range as the Recharge data.
 
 #Calculate the number of zones and aquifers based on the
 NumberOfZones         <- length(AquiferZoneDryFractions[[1]])
 NumberOfAquifers      <- length(AquiferZoneDryFractions)
+
+#The Pumping time series are the last columns of the zone time series'
+PumpingTimeSeries       <- ZoneTimeseries[c(1,(ncol(ZoneTimeseries)-NumberOfZones+1):ncol(ZoneTimeseries))]
 
 #Multiply the aquifer recharge fractions by the recharge timeseries to calculate a total recharge for each zone
 ZoneFractions  <- c()                                               #Initialise ZoneFractions to an empty set
@@ -110,7 +110,7 @@ ZoneVadoseRecharge <- ZoneVadoseRecharge + ZoneRiverRecharge
 #Use these aquifer fractions to get total pumping
 AquiferFractions <- sapply(as.matrix(AquiferZoneDryFractions), unlist) + sapply(as.matrix(AquiferZoneIrrigFractions),unlist)
 
-PumpingScaled <- sweep(PumpingTimeseries[,2:ncol(PumpingTimeseries)],MARGIN=2, as.vector(t(AquiferFractions)),'*')
+PumpingScaled <- sweep(PumpingTimeSeries[,2:ncol(PumpingTimeSeries)],MARGIN=2, as.vector(t(AquiferFractions)),'*')
 #Now I need to add together the aquifers
 PumpingTotals    <- c()     #Initialise
 for (ZoneNo in 1:(NumberOfZones)){
